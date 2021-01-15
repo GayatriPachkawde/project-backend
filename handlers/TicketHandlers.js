@@ -104,4 +104,13 @@ exports.generateRandomNumbers = () => {
   return finalResult;
 };
 
-//export default generateRandomNumbers;
+var set = new Set();
+exports.uniqueRandomNumbers = () => {
+  while (true) {
+    const n = Math.floor(Math.random() * 90) + 1;
+    if (!set.has(n)) {
+      set.add(n);
+      return n;
+    }
+  }
+};

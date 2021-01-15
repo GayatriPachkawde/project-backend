@@ -1,6 +1,9 @@
-const { generateRandomNumbers } = require("./handlers/TicketHandlers");
+const { uniqueRandomNumbers } = require("./handlers/TicketHandlers");
 require("dotenv").config();
-const jwt = require("jwt-then");
+// const jwt = require("jwt-then");
+const jwt = require("jsonwebtoken");
+
+let intervalId;
 
 const mongoose = require("mongoose");
 mongoose.connect(process.env.DATABASE, {
@@ -52,13 +55,33 @@ io.on("connection", (socket) => {
     const user = await User.findOne({ _id: socket.userId });
 
     const gameroom = await gameRoom.findOne({ _id: gameroomid });
-    gameroom.players.push(user.name);
-    await gameroom.save();
 
+    if (gameroom.username === user.name) {
+      socket.emit("admin", {
+        isadmin: true,
+      });
+    } else {
+      socket.emit("admin", {
+        isadmin: false,
+      });
+    }
+
+    if (!gameroom.players.includes(user.name)) {
+      gameroom.players.push(user.name);
+      await gameroom.save();
+    }
+
+    io.to(gameroomid).emit("players", {
+      players: gameroom.players,
+    });
     console.log(`A user joined gameroom ${gameroomid}`);
   });
 
-  socket.on("leaveroom", ({ gameroomid }) => {
+  socket.on("leaveroom", async ({ gameroomid }) => {
+    if (intervalId) {
+      clearInterval(intervalId);
+    }
+
     socket.leave(gameroomid);
     console.log(`A user left gameroom ${gameroomid}`);
   });
@@ -72,5 +95,17 @@ io.on("connection", (socket) => {
         userId: socket.userId,
       });
     }
+  });
+
+  socket.on("startTimer", async ({ gameroomid }) => {
+    await gameRoom.deleteOne({ _id: gameroomid });
+
+    const emitData = () => {
+      io.to(gameroomid).emit("timerStarted", {
+        time: uniqueRandomNumbers(),
+      });
+    };
+    emitData();
+    intervalId = setInterval(emitData, 2000);
   });
 });

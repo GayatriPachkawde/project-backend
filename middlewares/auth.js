@@ -1,4 +1,5 @@
-const jwt = require("jwt-then");
+const jwt = require("jsonwebtoken");
+// const jwt = require("jwt-then");
 
 module.exports = async (req, res, next) => {
   try {
